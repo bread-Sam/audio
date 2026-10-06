@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>한글 탐험대! 자음·모음 원리 퀴즈 대결</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Jua (귀여운 제목), Nanum Gothic (본문) -->
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+  <!-- Confetti library for game clear -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <style>
+    * {
+      touch-action: manipulation; /* Prevent zoom on double tap on interactive whiteboards */
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      font-family: 'Nanum Gothic', sans-serif;
+      background-color: #f8fafc;
+      overflow: hidden;
+    }
+    .font-jua {
+      font-family: 'Jua', cursive, sans-serif;
+    }
+    /* Touch animation feedback */
+    .option-btn {
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s;
+    }
+    .option-btn:active {
+      transform: scale(0.96);
+    }
+    /* Custom bounce & shake animations */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .animate-shake {
+      animation: shake 0.4s ease-in-out;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 1.5s infinite;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between bg-amber-50">
+
+  <!-- Top Global Bar -->
+  <header class="h-16 bg-gradient-to-r from-amber-400 via-orange-300 to-amber-400 border-b-4 border-amber-500 flex items-center justify-between px-6 shadow-md z-10 flex-shrink-0">
+    <div class="flex items-center space-x-3">
+      <span class="text-3xl">✏️</span>
+      <h1 class="font-jua text-2xl md:text-3xl text-amber-900 tracking-wide drop-shadow-sm">
+        한글 탐험대 <span class="text-lg md:text-xl text-amber-800 font-normal">| 자음·모음 원리 퀴즈 대결</span>
+      </h1>
+    </div>
+    <div class="flex items-center space-x-3">
+      <button onclick="resetGame()" class="font-jua bg-white hover:bg-amber-100 text-amber-900 px-4 py-2 rounded-2xl shadow border-2 border-amber-400 text-lg flex items-center gap-1 active:scale-95 transition">
+        🔄 다시 시작
+      </button>
+    </div>
+  </header>
+
+  <!-- Start Modal Overlay -->
+  <div id="start-screen" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-8 max-w-2xl w-full text-center border-8 border-amber-300 shadow-2xl relative animate-pulse-subtle">
+      <div class="text-6xl mb-4">🇰🇷 ✏️ 🐥</div>
+      <h2 class="font-jua text-4xl text-amber-600 mb-2">신나는 한글 원리 퀴즈 대결!</h2>
+      <p class="text-gray-600 text-lg mb-6 leading-relaxed">
+        전자칠판 좌, 우에 나누어 서서 1분 동안 자음과 모음의 원리 퀴즈를 풀어보세요!<br>
+        <span class="text-amber-700 font-bold">10문제가 서로 다른 순서로 출제됩니다!</span>
+      </p>
+
+      <div class="grid grid-cols-2 gap-6 mb-8 text-left">
+        <div class="bg-pink-50 p-4 rounded-2xl border-2 border-pink-300 flex items-center space-x-4">
+          <span class="text-4xl">🦁</span>
+          <div>
+            <span class="font-jua text-xl text-pink-600 block">왼쪽 자릿수</span>
+            <span class="text-sm text-gray-600">선수 1 (훈민이)</span>
+          </div>
+        </div>
+        <div class="bg-blue-50 p-4 rounded-2xl border-2 border-blue-300 flex items-center space-x-4">
+          <span class="text-4xl">🐰</span>
+          <div>
+            <span class="font-jua text-xl text-blue-600 block">오른쪽 자릿수</span>
+            <span class="text-sm text-gray-600">선수 2 (정음이)</span>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="startGame()" class="font-jua text-3xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold px-12 py-5 rounded-full shadow-lg border-b-8 border-amber-600 active:translate-y-1 transition transform">
+        🚀 대결 시작하기!
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Dual Player Game Arena -->
+  <main class="flex-1 grid grid-cols-2 gap-3 p-3 overflow-hidden relative">
+    <!-- Center Divider Line with Visual Indicator -->
+    <div class="absolute left-1/2 top-0 bottom-0 -ml-1 w-2 bg-gradient-to-b from-amber-300 via-orange-400 to-amber-300 z-20 rounded-full shadow-inner pointer-events-none"></div>
+
+    <!-- LEFT PLAYER (P1 - 훈민이) -->
+    <section id="p1-area" class="bg-gradient-to-b from-pink-50 via-rose-50 to-orange-50 rounded-3xl border-4 border-pink-300 shadow-md flex flex-col p-4 relative overflow-hidden">
+      <!-- Player Info Header -->
+      <div class="flex items-center justify-between bg-white/80 backdrop-blur rounded-2xl p-3 border-2 border-pink-200 shadow-sm mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-3xl">🦁</span>
+          <div>
+            <div class="font-jua text-xl text-pink-600 leading-none">훈민이 (왼쪽)</div>
+            <div class="text-xs text-gray-500 mt-1">점수: <span id="p1-score" class="font-bold text-pink-600 text-base">0</span>점</div>
+          </div>
+        </div>
+        
+        <!-- Timer -->
+        <div class="flex flex-col items-end">
+          <div class="flex items-center space-x-1 font-jua text-2xl text-rose-600">
+            <span>⏱️</span>
+            <span id="p1-timer">60</span>초
+          </div>
+          <div class="w-28 bg-gray-200 h-2.5 rounded-full overflow-hidden mt-1 border border-pink-200">
+            <div id="p1-timer-bar" class="bg-pink-500 h-full w-full transition-all duration-1000"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Badge -->
+      <div class="flex justify-between items-center px-2 mb-2">
+        <span class="font-jua text-pink-700 text-lg">문제 <span id="p1-current-num">1</span> / 10</span>
+        <div class="flex gap-1" id="p1-dots">
+          <!-- Dots rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Question Box -->
+      <div class="bg-white rounded-2xl p-5 border-2 border-pink-200 shadow-sm mb-4 flex-1 flex flex-col justify-center items-center text-center relative">
+        <span id="p1-category-badge" class="absolute top-3 left-3 bg-pink-100 text-pink-700 text-xs font-bold px-3 py-1 rounded-full border border-pink-300">
+          발음기관 상형
+        </span>
+        <h3 id="p1-question-text" class="font-jua text-2xl lg:text-3xl text-gray-800 leading-snug mt-2">
+          문제가 여기에 로딩됩니다.
+        </h3>
+        <p id="p1-hint-text" class="text-sm text-pink-500 font-semibold mt-2 hidden">
+          💡 힌트 메시지
+        </p>
+      </div>
+
+      <!-- Options Grid (2x2) -->
+      <div id="p1-options" class="grid grid-cols-2 gap-3 h-48">
+        <!-- Option Buttons injected by JS -->
+      </div>
+      
+      <!-- Feedback Overlay Animation -->
+      <div id="p1-feedback" class="absolute inset-0 bg-white/90 backdrop-blur-sm z-30 flex flex-col items-center justify-center rounded-3xl hidden p-6 text-center">
+        <div id="p1-feedback-icon" class="text-8xl mb-2">⭕</div>
+        <div id="p1-feedback-msg" class="font-jua text-4xl text-emerald-600">정답입니다!</div>
+        <div id="p1-feedback-sub" class="text-gray-600 font-semibold text-lg mt-2 leading-relaxed">다음 문제로 넘어갑니다...</div>
+      </div>
+    </section>
+
+    <!-- RIGHT PLAYER (P2 - 정음이) -->
+    <section id="p2-area" class="bg-gradient-to-b from-sky-50 via-blue-50 to-indigo-50 rounded-3xl border-4 border-sky-300 shadow-md flex flex-col p-4 relative overflow-hidden">
+      <!-- Player Info Header -->
+      <div class="flex items-center justify-between bg-white/80 backdrop-blur rounded-2xl p-3 border-2 border-sky-200 shadow-sm mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-3xl">🐰</span>
+          <div>
+            <div class="font-jua text-xl text-sky-600 leading-none">정음이 (오른쪽)</div>
+            <div class="text-xs text-gray-500 mt-1">점수: <span id="p2-score" class="font-bold text-sky-600 text-base">0</span>점</div>
+          </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="flex flex-col items-end">
+          <div class="flex items-center space-x-1 font-jua text-2xl text-sky-600">
+            <span>⏱️</span>
+            <span id="p2-timer">60</span>초
+          </div>
+          <div class="w-28 bg-gray-200 h-2.5 rounded-full overflow-hidden mt-1 border border-sky-200">
+            <div id="p2-timer-bar" class="bg-sky-500 h-full w-full transition-all duration-1000"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Badge -->
+      <div class="flex justify-between items-center px-2 mb-2">
+        <span class="font-jua text-sky-700 text-lg">문제 <span id="p2-current-num">1</span> / 10</span>
+        <div class="flex gap-1" id="p2-dots">
+          <!-- Dots rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Question Box -->
+      <div class="bg-white rounded-2xl p-5 border-2 border-sky-200 shadow-sm mb-4 flex-1 flex flex-col justify-center items-center text-center relative">
+        <span id="p2-category-badge" class="absolute top-3 left-3 bg-sky-100 text-sky-700 text-xs font-bold px-3 py-1 rounded-full border border-sky-300">
+          모음의 원리
+        </span>
+        <h3 id="p2-question-text" class="font-jua text-2xl lg:text-3xl text-gray-800 leading-snug mt-2">
+          문제가 여기에 로딩됩니다.
+        </h3>
+        <p id="p2-hint-text" class="text-sm text-sky-500 font-semibold mt-2 hidden">
+          💡 힌트 메시지
+        </p>
+      </div>
+
+      <!-- Options Grid (2x2) -->
+      <div id="p2-options" class="grid grid-cols-2 gap-3 h-48">
+        <!-- Option Buttons injected by JS -->
+      </div>
+
+      <!-- Feedback Overlay Animation -->
+      <div id="p2-feedback" class="absolute inset-0 bg-white/90 backdrop-blur-sm z-30 flex flex-col items-center justify-center rounded-3xl hidden p-6 text-center">
+        <div id="p2-feedback-icon" class="text-8xl mb-2">⭕</div>
+        <div id="p2-feedback-msg" class="font-jua text-4xl text-emerald-600">정답입니다!</div>
+        <div id="p2-feedback-sub" class="text-gray-600 font-semibold text-lg mt-2 leading-relaxed">다음 문제로 넘어갑니다...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Final Result Modal -->
+  <div id="result-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-8 max-w-3xl w-full text-center border-8 border-amber-300 shadow-2xl relative">
+      <div class="text-6xl mb-2">🏆</div>
+      <h2 class="font-jua text-4xl text-amber-600 mb-1">대결 종료! 결과 발표</h2>
+      <p class="text-gray-500 text-base mb-6">모두 정말 수고했어요! 한글 박사님들 짱!</p>
+
+      <div class="grid grid-cols-2 gap-6 mb-8">
+        <!-- P1 Result -->
+        <div id="p1-result-card" class="bg-pink-50 p-6 rounded-2xl border-4 border-pink-300 text-center flex flex-col items-center justify-center">
+          <span class="text-5xl mb-2">🦁</span>
+          <h3 class="font-jua text-2xl text-pink-600">훈민이 (왼쪽)</h3>
+          <div class="text-4xl font-black text-pink-700 my-2"><span id="p1-final-score">0</span> <span class="text-xl">점</span></div>
+          <div id="p1-badge" class="font-jua bg-pink-200 text-pink-800 text-lg px-4 py-1 rounded-full">
+            참 잘했어요!
+          </div>
+        </div>
+
+        <!-- P2 Result -->
+        <div id="p2-result-card" class="bg-sky-50 p-6 rounded-2xl border-4 border-sky-300 text-center flex flex-col items-center justify-center">
+          <span class="text-5xl mb-2">🐰</span>
+          <h3 class="font-jua text-2xl text-sky-600">정음이 (오른쪽)</h3>
+          <div class="text-4xl font-black text-sky-700 my-2"><span id="p2-final-score">0</span> <span class="text-xl">점</span></div>
+          <div id="p2-badge" class="font-jua bg-sky-200 text-sky-800 text-lg px-4 py-1 rounded-full">
+            참 잘했어요!
+          </div>
+        </div>
+      </div>
+
+      <div id="winner-banner" class="font-jua text-3xl text-amber-700 bg-amber-100 p-4 rounded-2xl border-2 border-amber-300 mb-6">
+        🎉 축하합니다!
+      </div>
+
+      <button onclick="resetGame()" class="font-jua text-2xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold px-10 py-4 rounded-full shadow-lg border-b-4 border-amber-600 active:translate-y-1 transition transform">
+        🔄 다시 대결하기
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Web Audio API Synthesizer for Touch Effects
+    class SoundEffects {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+
+      playCorrect() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+
+      playWrong() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now); // A3
+        osc.frequency.setValueAtTime(174.61, now + 0.15); // F3
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playWin() {
+        this.init();
+        if (!this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const now = this.ctx.currentTime + idx * 0.12;
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.3);
+        });
+      }
+    }
+
+    const sounds = new SoundEffects();
+
+    // 10 Master Questions on Hangeul Consonants & Vowels principles
+    const masterQuestions = [
+      {
+        category: "자음 상형의 원리",
+        question: "혀가 목구멍을 막는 모양을 본떠 만든 기본 자음은 무엇일까요?",
+        options: ["ㄱ", "ㄴ", "ㅁ", "ㅅ"],
+        answer: 0,
+        explanation: "ㄱ은 혀뿌리가 목구멍을 막는 모양을 본뜬 기본자예요!"
+      },
+      {
+        category: "가획의 원리",
+        question: "기본 자음 'ㄴ'에 획을 더하여 만든 가획 자음은 무엇일까요?",
+        options: ["ㄷ", "ㅂ", "ㅈ", "ㅎ"],
+        answer: 0,
+        explanation: "ㄴ에 획을 더해 ㄷ, ㅌ을 만들었어요!"
+      },
+      {
+        category: "천지인 모음 원리",
+        question: "기본 모음 3가지 중 '하늘(天)의 둥근 모양'을 본뜬 글자는 무엇일까요?",
+        options: ["ㆍ (아래아)", "ㅡ (땅)", "ㅣ (사람)", "ㅗ"],
+        answer: 0,
+        explanation: "ㆍ(아래아)는 둥근 하늘의 모양을 본떴어요!"
+      },
+      {
+        category: "입술 모양 상형",
+        question: "입술 모양을 본뜬 기본 자음 'ㅁ'에 획을 더해 만든 글자는?",
+        options: ["ㅂ", "ㅌ", "ㅊ", "ㄹ"],
+        answer: 0,
+        explanation: "ㅁ에 획을 더하면 ㅂ, ㅍ이 됩니다!"
+      },
+      {
+        category: "초출자 모음 원리",
+        question: "기본 모음 'ㅡ' 위에 'ㆍ'를 합쳐서 만든 첫 번째 모음은?",
+        options: ["ㅗ", "ㅜ", "ㅏ", "ㅓ"],
+        answer: 0,
+        explanation: "ㅡ 위에 ㆍ를 올리면 'ㅗ'가 됩니다!"
+      },
+      {
+        category: "이(치아) 모양 상형",
+        question: "뾰족한 '이(치아)의 모양'을 본떠 만든 기본 자음은 무엇일까요?",
+        options: ["ㅅ", "ㄱ", "ㄴ", "ㅇ"],
+        answer: 0,
+        explanation: "ㅅ은 이(치아)의 뾰족한 모양을 본떴어요!"
+      },
+      {
+        category: "병서 (나란히 쓰기)",
+        question: "같은 자음 'ㄱ'을 두 번 나란히 붙여 쓴 된소리 글자는?",
+        options: ["ㄲ", "ㅋ", "ㄳ", "ㄷ"],
+        answer: 0,
+        explanation: "같은 글자를 나란히 붙여 쓰는 것을 병서라고 해요!"
+      },
+      {
+        category: "목구멍 모양 상형",
+        question: "둥근 '목구멍의 모양'을 본떠 만든 기본 자음은 무엇일까요?",
+        options: ["ㅇ", "ㅁ", "ㄴ", "ㅅ"],
+        answer: 0,
+        explanation: "ㅇ은 목구멍의 동그란 모양을 본뜬 글자예요!"
+      },
+      {
+        category: "제출자 모음 원리",
+        question: "모음 'ㅏ'에 'ㆍ'를 하나 더 붙여서 만든 글자는 무엇일까요?",
+        options: ["ㅑ", "ㅕ", "ㅛ", "ㅠ"],
+        answer: 0,
+        explanation: "ㅏ에 ㆍ를 더하면 'ㅑ'가 됩니다!"
+      },
+      {
+        category: "사람 모양 상형",
+        question: "기본 모음 중 '서 있는 사람(人)'의 모습을 본뜬 글자는?",
+        options: ["ㅣ", "ㅡ", "ㆍ", "ㅏ"],
+        answer: 0,
+        explanation: "ㅣ는 사람이 똑바로 서 있는 모양을 본떴어요!"
+      }
+    ];
+
+    // Helper: Fisher-Yates Shuffle
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Prepare shuffled question object with randomized options
+    function generatePlayerQuestions() {
+      const shuffledQ = shuffleArray(masterQuestions);
+      return shuffledQ.map(q => {
+        // Create indexed options array
+        const opts = q.options.map((opt, idx) => ({ text: opt, isCorrect: idx === q.answer }));
+        const shuffledOpts = shuffleArray(opts);
+        return {
+          category: q.category,
+          question: q.question,
+          options: shuffledOpts,
+          explanation: q.explanation
+        };
+      });
+    }
+
+    // Game State
+    let gameActive = false;
+    let timerInterval = null;
+
+    const state = {
+      p1: {
+        questions: [],
+        currentIndex: 0,
+        score: 0,
+        timeLeft: 60,
+        finished: false,
+        isLocked: false,
+        penaltyInterval: null
+      },
+      p2: {
+        questions: [],
+        currentIndex: 0,
+        score: 0,
+        timeLeft: 60,
+        finished: false,
+        isLocked: false,
+        penaltyInterval: null
+      }
+    };
+
+    function startGame() {
+      document.getElementById('start-screen').classList.add('hidden');
+      document.getElementById('result-modal').classList.add('hidden');
+
+      // Clear any remaining intervals if reset
+      if (state.p1.penaltyInterval) clearInterval(state.p1.penaltyInterval);
+      if (state.p2.penaltyInterval) clearInterval(state.p2.penaltyInterval);
+
+      // Initialize Player Questions independently
+      state.p1.questions = generatePlayerQuestions();
+      state.p1.currentIndex = 0;
+      state.p1.score = 0;
+      state.p1.timeLeft = 60;
+      state.p1.finished = false;
+      state.p1.isLocked = false;
+      hideFeedback('p1');
+
+      state.p2.questions = generatePlayerQuestions();
+      state.p2.currentIndex = 0;
+      state.p2.score = 0;
+      state.p2.timeLeft = 60;
+      state.p2.finished = false;
+      state.p2.isLocked = false;
+      hideFeedback('p2');
+
+      gameActive = true;
+
+      // Render Initial UI
+      renderPlayerUI('p1');
+      renderPlayerUI('p2');
+
+      // Start Countdown Timer (1초 간격)
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimers, 1000);
+    }
+
+    function resetGame() {
+      if (timerInterval) clearInterval(timerInterval);
+      if (state.p1.penaltyInterval) clearInterval(state.p1.penaltyInterval);
+      if (state.p2.penaltyInterval) clearInterval(state.p2.penaltyInterval);
+      
+      hideFeedback('p1');
+      hideFeedback('p2');
+
+      document.getElementById('start-screen').classList.remove('hidden');
+      document.getElementById('result-modal').classList.add('hidden');
+    }
+
+    function updateTimers() {
+      if (!gameActive) return;
+
+      ['p1', 'p2'].forEach(playerKey => {
+        const p = state[playerKey];
+        if (!p.finished) {
+          p.timeLeft -= 1;
+          if (p.timeLeft <= 0) {
+            p.timeLeft = 0;
+            p.finished = true;
+            showFeedback(playerKey, false, "⏱️ 시간 초과!", "제한시간 1분이 종료되었습니다.");
+          }
+          
+          // Update UI
+          document.getElementById(`${playerKey}-timer`).innerText = p.timeLeft;
+          const barPercent = (p.timeLeft / 60) * 100;
+          document.getElementById(`${playerKey}-timer-bar`).style.width = `${barPercent}%`;
+        }
+      });
+
+      // Check if both players finished
+      if (state.p1.finished && state.p2.finished) {
+        endGame();
+      }
+    }
+
+    function renderPlayerUI(playerKey) {
+      const p = state[playerKey];
+      const q = p.questions[p.currentIndex];
+
+      // Update Score & Number
+      document.getElementById(`${playerKey}-score`).innerText = p.score;
+      document.getElementById(`${playerKey}-current-num`).innerText = Math.min(p.currentIndex + 1, 10);
+
+      // Render Dots
+      const dotsContainer = document.getElementById(`${playerKey}-dots`);
+      dotsContainer.innerHTML = '';
+      for (let i = 0; i < 10; i++) {
+        const dot = document.createElement('div');
+        dot.className = `w-2.5 h-2.5 rounded-full ${
+          i < p.currentIndex 
+            ? (playerKey === 'p1' ? 'bg-pink-500' : 'bg-sky-500') 
+            : 'bg-gray-300'
+        }`;
+        dotsContainer.appendChild(dot);
+      }
+
+      if (p.finished || p.currentIndex >= 10) {
+        document.getElementById(`${playerKey}-question-text`).innerText = "🎉 모든 퀴즈를 완료했습니다!";
+        document.getElementById(`${playerKey}-category-badge`).innerText = "완료";
+        document.getElementById(`${playerKey}-options`).innerHTML = `
+          <div class="col-span-2 bg-white/80 rounded-2xl p-6 flex flex-col items-center justify-center border-2 border-dashed border-gray-300">
+            <span class="text-4xl mb-2">⭐</span>
+            <span class="font-jua text-xl text-gray-700">상대방 학생이 마칠 때까지 잠시 기다려 주세요!</span>
+          </div>
+        `;
+        return;
+      }
+
+      // Render Question
+      document.getElementById(`${playerKey}-category-badge`).innerText = q.category;
+      document.getElementById(`${playerKey}-question-text`).innerText = q.question;
+
+      // Render Option Buttons (Big Whiteboard Touch Buttons)
+      const optionsContainer = document.getElementById(`${playerKey}-options`);
+      optionsContainer.innerHTML = '';
+
+      const colorPalette = playerKey === 'p1' ? [
+        'bg-pink-100 border-pink-300 text-pink-900 hover:bg-pink-200',
+        'bg-rose-100 border-rose-300 text-rose-900 hover:bg-rose-200',
+        'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200',
+        'bg-orange-100 border-orange-300 text-orange-900 hover:bg-orange-200'
+      ] : [
+        'bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-200',
+        'bg-indigo-100 border-indigo-300 text-indigo-900 hover:bg-indigo-200',
+        'bg-cyan-100 border-cyan-300 text-cyan-900 hover:bg-cyan-200',
+        'bg-teal-100 border-teal-300 text-teal-900 hover:bg-teal-200'
+      ];
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        const lockClass = p.isLocked ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'active:scale-95 cursor-pointer';
+        btn.className = `option-btn w-full h-full font-jua text-2xl lg:text-3xl rounded-2xl border-4 shadow-md flex items-center justify-center p-2 transition ${colorPalette[idx % 4]} ${lockClass}`;
+        btn.innerText = opt.text;
+        btn.onclick = () => handleAnswer(playerKey, opt.isCorrect, q.explanation);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(playerKey, isCorrect, explanation) {
+      const p = state[playerKey];
+      if (p.finished || p.isLocked || !gameActive) return;
+
+      if (isCorrect) {
+        sounds.playCorrect();
+        p.score += 10;
+        showFeedback(playerKey, true, "정답입니다! ⭕", explanation);
+
+        // Lock momentarily during standard display (1 sec)
+        p.isLocked = true;
+        setTimeout(() => {
+          p.isLocked = false;
+          p.currentIndex += 1;
+          if (p.currentIndex >= 10) {
+            p.finished = true;
+          }
+          hideFeedback(playerKey);
+          renderPlayerUI(playerKey);
+
+          // Check overall end game condition
+          if (state.p1.finished && state.p2.finished) {
+            endGame();
+          }
+        }, 1000);
+      } else {
+        sounds.playWrong();
+        p.isLocked = true;
+
+        let penaltySeconds = 3;
+        const buildPenaltyHTML = (sec) => `
+          <div>${explanation}</div>
+          <div class="mt-3 inline-block bg-rose-100 text-rose-700 font-bold px-4 py-1.5 rounded-full border border-rose-300 text-base animate-pulse">
+            ⏳ 3초간 선택 불가 (${sec}초)
+          </div>
+        `;
+
+        showFeedback(playerKey, false, "아쉬워요! ❌", buildPenaltyHTML(penaltySeconds));
+
+        if (p.penaltyInterval) clearInterval(p.penaltyInterval);
+
+        p.penaltyInterval = setInterval(() => {
+          penaltySeconds -= 1;
+          if (penaltySeconds > 0) {
+            document.getElementById(`${playerKey}-feedback-sub`).innerHTML = buildPenaltyHTML(penaltySeconds);
+          } else {
+            clearInterval(p.penaltyInterval);
+            p.penaltyInterval = null;
+            p.isLocked = false;
+            p.currentIndex += 1;
+
+            if (p.currentIndex >= 10) {
+              p.finished = true;
+            }
+
+            hideFeedback(playerKey);
+            renderPlayerUI(playerKey);
+
+            if (state.p1.finished && state.p2.finished) {
+              endGame();
+            }
+          }
+        }, 1000);
+      }
+    }
+
+    function showFeedback(playerKey, isCorrect, title, subHTML) {
+      const overlay = document.getElementById(`${playerKey}-feedback`);
+      const icon = document.getElementById(`${playerKey}-feedback-icon`);
+      const msg = document.getElementById(`${playerKey}-feedback-msg`);
+      const subMsg = document.getElementById(`${playerKey}-feedback-sub`);
+
+      icon.innerText = isCorrect ? "⭕" : "❌";
+      msg.innerText = title;
+      msg.className = `font-jua text-4xl ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`;
+      subMsg.innerHTML = subHTML;
+
+      overlay.classList.remove('hidden');
+    }
+
+    function hideFeedback(playerKey) {
+      document.getElementById(`${playerKey}-feedback`).classList.add('hidden');
+    }
+<!-- ... existing code ... `
